@@ -1,6 +1,6 @@
 from sqlalchemy import create_engine, Column, String, Integer, Boolean, Float, ForeignKey
 from sqlalchemy.orm import declarative_base
-from sqlalchemy_utils.types import ChoiceType
+#from sqlalchemy_utils.types import ChoiceType
 
 #criando conexão
 db = create_engine("sqlite:///database/banco.db")

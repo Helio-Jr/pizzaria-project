@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from models import Usuario
+from models.models import Usuario
 from dependencies.dependencies import iniciar_sessao
 from main import bcrypt_context
 from schemas.schemas import UsuarioSchema
