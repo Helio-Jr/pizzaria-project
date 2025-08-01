@@ -2,10 +2,21 @@ from fastapi import APIRouter, Depends, HTTPException
 from models.models import Usuario
 from dependencies.dependencies import iniciar_sessao
 from main import bcrypt_context
-from schemas.schemas import UsuarioSchema
+from schemas.schemas import UsuarioSchema, LoginSchema
 from sqlalchemy.orm import Session
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
+
+def criar_token(id_usuario):
+    return f"gdsr52j153kn6{id_usuario}"
+
+def autenticar_usuario(email, senha, session):
+    usuario = session.query(Usuario).filter(Usuario.email==email).first()
+    if not usuario:
+        return False
+    elif not bcrypt_context.verify(senha, usuario.senha):
+        return False
+    return usuario
 
 @auth_router.get("/")
 async def autenticacao():
@@ -22,3 +33,16 @@ async def criar_conta(usuario_schema: UsuarioSchema, session: Session = Depends(
         session.add(novo_usuario)
         session.commit()
         return {"mensagem": f"Usuário {usuario_schema.nome} cadastrado com sucesso."}
+    
+@auth_router.post("/login")
+async def login(login_schema: LoginSchema, session: Session = Depends(iniciar_sessao)):
+    usuario = autenticar_usuario(login_schema.email, login_schema.senha, session)
+    if not usuario:
+        raise HTTPException(status_code=400, detail="Email ou senha inválidos.")  
+    else:
+        acess_token = criar_token(usuario.id)
+        return {
+            "access_token": acess_token,
+            "token type": "Bearer"
+        }
+            
