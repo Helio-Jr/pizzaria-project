@@ -1,14 +1,23 @@
 from fastapi import APIRouter, Depends, HTTPException
 from models.models import Usuario
 from dependencies.dependencies import iniciar_sessao
-from main import bcrypt_context
+from main import bcrypt_context, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, SECRET_KEY
 from schemas.schemas import UsuarioSchema, LoginSchema
 from sqlalchemy.orm import Session
+from jose import jwt, JWTError
+from datetime import datetime, timedelta, timezone
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
 
-def criar_token(id_usuario):
-    return f"gdsr52j153kn6{id_usuario}"
+def criar_token(id_usuario, duracao_token=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)):
+    data_expiracao = datetime.now(timezone.utc) + duracao_token
+    dic_info = {"sub": id_usuario, "exp": data_expiracao} #geralmente usa sub na chave do id
+    jwt_codigicado = jwt.encode(dic_info, SECRET_KEY, ALGORITHM)
+    return jwt_codigicado
+
+def verificar_token(token, session: Session=Depends(iniciar_sessao)):
+    usuario = session.query(Usuario).filter(Usuario.id == 1).first()
+    return usuario 
 
 def autenticar_usuario(email, senha, session):
     usuario = session.query(Usuario).filter(Usuario.email==email).first()
@@ -41,8 +50,18 @@ async def login(login_schema: LoginSchema, session: Session = Depends(iniciar_se
         raise HTTPException(status_code=400, detail="Email ou senha inválidos.")  
     else:
         acess_token = criar_token(usuario.id)
+        refresh_token = criar_token(usuario.id, duracao_token=timedelta(days=7))
         return {
             "access_token": acess_token,
+            "refresh_token": refresh_token,
             "token type": "Bearer"
         }
             
+@auth_router.post("/refresh")
+async def use_refrash_token(token):
+    usuario = verificar_token(token)
+    acess_token = criar_token(usuario.id)
+    return {
+        "access_token": acess_token,
+        "token type": "Bearer"
+    }
