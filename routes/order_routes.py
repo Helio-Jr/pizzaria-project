@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from schemas.schemas import PedidoSchema
-from dependencies.dependencies import iniciar_sessao
+from dependencies.dependencies import iniciar_sessao, verificar_token   
 from sqlalchemy.orm import Session
 from models.models import Pedidos
 

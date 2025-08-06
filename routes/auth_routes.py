@@ -58,8 +58,7 @@ async def login(login_schema: LoginSchema, session: Session = Depends(iniciar_se
         }
             
 @auth_router.post("/refresh")
-async def use_refrash_token(token):
-    usuario = verificar_token(token)
+async def use_refresh_token(usuario: Usuario = Depends(verificar_token)):
     acess_token = criar_token(usuario.id)
     return {
         "access_token": acess_token,
