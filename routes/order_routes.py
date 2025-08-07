@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, dependencies, HTTPException
-from schemas.schemas import PedidoSchema
+from schemas.schemas import PedidoSchema, ItemPedidoSchema
 from dependencies.dependencies import iniciar_sessao, verificar_token   
 from sqlalchemy.orm import Session
-from models.models import Pedidos, Usuario
+from models.models import Pedidos, Usuario, ItensPedido
 
 order_router = APIRouter(prefix="/order", tags=["order"], dependencies=[Depends(verificar_token)])
 
@@ -32,3 +32,36 @@ async def cancelar_pedido(id_pedido: int, session: Session = Depends(iniciar_ses
         "mensagem": f"Pedido número {pedido.id} cancelado com sucesso",
         "pedido": pedido
     }
+
+@order_router.get("/listar")
+async def listar_pedidos(session: Session = Depends(iniciar_sessao), usuario: Usuario = Depends(verificar_token)):
+    if not usuario.admin:
+        raise HTTPException(status_code=401, detail="Você não tem autorização para listar os pedidos.")
+    else:
+        pedidos = session.query(Pedidos).all()
+    return {
+        "pedidos": pedidos
+    } 
+
+@order_router.post("/pedido/adicionar-item/{id_pedido}")
+async def adicionar_item_pedido(id_pedido: int,
+                                item_pedido_schema: ItemPedidoSchema, 
+                                session: Session = Depends(iniciar_sessao),
+                                usuario: Usuario = Depends(verificar_token)):
+    
+    pedido = session.query(Pedidos).filter(Pedidos.id==id_pedido).first()
+    if not pedido:
+        raise HTTPException(status_code=400, detail="Pedido não encontrado.")
+    if not usuario.admin and usuario.id!=pedido.usuario:
+        raise HTTPException(status_code=401, detail="Você não tem autorização para excluir esse pedido.")
+    
+    item_pedido = ItensPedido(item_pedido_schema.quantidade, item_pedido_schema.sabor, item_pedido_schema.tamanho, item_pedido_schema.preco_unitario, id_pedido)
+    session.add(item_pedido)
+    pedido.calcular_preco()
+    session.commit()
+    return {
+        "mensagem":"Item criado com sucesso.",
+        "item_id": item_pedido.id,
+        "preco_pedido": pedido.preco
+    }
+
