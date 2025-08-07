@@ -14,13 +14,11 @@ def iniciar_sessao():
         session.close()
 
 def verificar_token(token: str = Depends(oauth2_schema), session: Session=Depends(iniciar_sessao)):
-    print("--------------------------------")
-    print(token)
     try:
         dic_info =  jwt.decode(token, SECRET_KEY, ALGORITHM)
-        id_usuario = dic_info.get("sub")
-        print(id_usuario)
-    except JWTError:
+        id_usuario = int(dic_info.get("sub"))
+    except JWTError as erro:
+        print(erro)
         raise HTTPException(status_code=401, detail="Acesso Negado! Verifique a validade do token.")
     usuario = session.query(Usuario).filter(Usuario.id == id_usuario).first()
     if not usuario:
